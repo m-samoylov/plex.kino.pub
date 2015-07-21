@@ -103,7 +103,7 @@ def MainMenu():
             DirectoryObject(
                 key = Callback(Items, title='Последние'),
                 title = unicode('Последние'),
-                summary = unicode('Все фильмы и сериалы отсортированные по дате добавления.')
+                summary = unicode('Все фильмы и сериалы отсортированные по дате добавления/обновления.')
             )
         ]
     )
@@ -113,7 +113,7 @@ def MainMenu():
     if response['status'] == 200:
         for item in response['items']:
             li = DirectoryObject(
-                key = Callback(Items, title=item['title'], qp={'type': item['id']}),
+                key = Callback(Types, title=item['title'], qp={'type': item['id']}),
                 title = unicode(item['title']),
                 summary = unicode(item['title'])
             )
@@ -121,8 +121,66 @@ def MainMenu():
     else:
         return MessageContainer("Ошибка %s" % response['status'], response['message'])
     return oc
+'''
+  Next screen after MainMenu.
+  Show folders:
+    - Search
+    - Latest (sort by date/update)
+    - Rating (sort by rating)
+    - Genres
+'''
+@route(PREFIX + '/Types', qp=dict)
+def Types(title, qp=dict):
+    oc = ObjectContainer(
+        view_group = 'InfoList',
+        objects = [
+            InputDirectoryObject(
+                key     = Callback(Search, qp=qp),
+                title   = unicode('Поиск'),
+                prompt  = unicode('Поиск')
+            ),
+            DirectoryObject(
+                key = Callback(Items, title='Последние', qp=merge_dicts(qp, dict({'sort': 'updated'}))),
+                title = unicode('Последние'),
+                summary = unicode('Отсортированные по дате добавления/обновления.')
+            ),
+            DirectoryObject(
+                key = Callback(Items, title='Популярные', qp=merge_dicts(qp, dict({'sort': 'rating'}))),
+                title = unicode('Популярные'),
+                summary = unicode('Отсортированные по рейтингу')
+            ),
+            DirectoryObject(
+                key = Callback(Genres, title='Жанры', qp=qp),
+                title = unicode('Жанры'),
+                summary = unicode('Список жанров')
+            ),
+        ]
+    )
+    return oc
 
-@route(PREFIX + '/Items/{type}', qp=dict)
+'''
+  Called from Types route.
+  Display genres for media type
+'''
+@route(PREFIX + '/Genres', qp=dict)
+def Genres(title, qp=dict):
+    response = kpubapi.api_request('genres', params={'type': qp['type']})
+    oc = ObjectContainer(view_group='InfoList')
+    if response['status'] == 200:
+        for genre in response['items']:
+            li = DirectoryObject(
+                key = Callback(Items, title=genre['title'], qp={'type':qp['type'], 'genre': genre['id']}),
+                title = genre['title'],
+            )
+            oc.add(li)
+    return oc
+
+'''
+  Shows media items.
+  Items are filtered by 'qp' param.
+  See http://kino.pub/docs/api/v2/api.html#video
+'''
+@route(PREFIX + '/Items', qp=dict)
 def Items(title, qp=dict):
     qp['perpage'] = ITEMS_PER_PAGE
     response = kpubapi.api_request('items', qp)
@@ -179,6 +237,9 @@ def Items(title, qp=dict):
             oc.add(li)
     return oc
 
+'''
+  Display serials or multi series movies
+'''
 @route(PREFIX + '/View', qp=dict)
 def View(title, qp=dict):
     response = kpubapi.api_request('items/%s' % int(qp['id']))
@@ -187,14 +248,11 @@ def View(title, qp=dict):
         item = response['item']
         # prepare serials
         if item['type'] in ['serial', 'docuserial']:
-            Log('WE HAVE SERIAL OR DOCUSERIAL')
             if 'season' in qp:
                 for season in item['seasons']:
-                    Log('Verify season %s' % season['number'])
                     if int(season['number']) == int(qp['season']):
                         for episode_number, episode in enumerate(season['episodes']):
                             episode_number += 1
-                            Log('Add episode for %s' % episode_number)
                             # create playable item
                             episode_title = "%s" % episode['title'] if len(episode['title']) > 1 else "Эпизод %s" % episode_number
                             episode_title = "%02d. %s"  % (episode_number, episode_title)
@@ -207,6 +265,7 @@ def View(title, qp=dict):
                                 directors = item['director'].split(','),
                                 countries = [x['title'] for x in item['countries']],
                                 content_rating = item['rating'],
+                                duration = int(episode['duration'])*1000,
                                 thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'].replace('dev.', ''), fallback=R(ICON))
                             )
                             oc.add(li)
@@ -238,10 +297,12 @@ def View(title, qp=dict):
                     directors = item['director'].split(','),
                     countries = [x['title'] for x in item['countries']],
                     content_rating = item['rating'],
-                    thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON))
+                    thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON)),
+                    art = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON))
                 )
                 oc.add(li)
         else:
+            # In true behaviour this section will never reached
             video = item['videos'][0]
             video_number = 1
             li = VideoClipObject(
@@ -255,10 +316,23 @@ def View(title, qp=dict):
                 content_rating = item['rating'],
                 thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON))
             )
-            oc.dd(li)
+            oc.add(li)
     return oc
 
-@route(PREFIX + '/Search')
-def Search(query):
-    #return MessageContainer("Поиск", query)
-    return Items('Поиск', qp={'title' : query, 'perpage': ITEMS_PER_PAGE})
+'''
+  Search items
+'''
+@route(PREFIX + '/Search', qp=dict)
+def Search(query, qp=dict):
+    if qp.get('id'):
+        del qp['id']
+
+    return Items('Поиск', qp=merge_dicts(qp, dict({'title' : query, 'perpage': ITEMS_PER_PAGE})))
+
+####################
+def merge_dicts(*args):
+    result = {}
+    for d in args:
+        Log('UPDATE DICT BY %s' % d)
+        result.update(d)
+    return result

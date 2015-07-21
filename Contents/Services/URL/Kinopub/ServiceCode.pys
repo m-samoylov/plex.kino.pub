@@ -14,21 +14,36 @@ def NormalizeURL(url):
 def MetadataObjectForURL(url):
     try:
         item = GetItem(url)
-        if item:
-            return VideoClipObject(
-                title = str(item['title']),
-                year = int(item['year']),
-                summary = str(item['plot']),
-                genres = [x['title'] for x in item['genres']],
-                directors = item['director'].split(','),
-                countries = [x['title'] for x in item['countries']],
-                thumb = Resource.ContentsOfURLWithFallback(item['posters']['big'], fallback='icon-default.png')
-            )
-            raise Exception()
-    except:
+        params = GetServiceParams(url)
+        video = GetVideoFromItem(item, params)
+
+        title = item['title']
+        thumb = item['posters']['medium']
+        duration = 0
+        if video:
+            if video['title']:
+                title = video['title']
+            duration = int(video['duration'])*1000
+
+            if video['thumbnail']:
+                 thumb = video['thumbnail']
+
+        return VideoClipObject(
+            title = unicode(title),
+            year = int(item['year']),
+            summary = item['plot'],
+            genres = [x['title'] for x in item['genres']],
+            directors = item['director'].split(','),
+            duration = duration,
+            countries = [x['title'] for x in item['countries']],
+            thumb = Resource.ContentsOfURLWithFallback(thumb.replace('dev.', ''), fallback='icon-default.png'),
+            art = Resource.ContentsOfURLWithFallback(item['posters']['medium'].replace('dev.', ''), fallback='icon-default.png')
+        )
+        raise Exception()
+    except Exception, e:
         return VideoClipObject(
             title = '<error>',
-            summary = '<An error occurred while fetching metadata>',
+            summary = '<An error occurred while fetching metadata> %s' %e,
         )
 
 ####################################################################################################
@@ -94,20 +109,6 @@ def MediaObjectsForURL(url):
     return mos
 
 ####################################################################################################
-def GetVideoFromItem(item, params):
-    if params.get('video'):
-        for idx, video in enumerate(item['videos']):
-            if idx+1 == int(params['video']):
-                return video
-    if params.get('season') and params.get('episode'):
-        for sidx, season in enumerate(item['seasons']):
-            if season['number'] != int(params['season']):
-                continue
-            for eidx, episode in enumerate(season['episodes']):
-                if eidx+1 == int(params['episode']):
-                    return episode
-
-####################################################################################################
 @indirect
 def PlayVideo(url, fmt=None):
     try:
@@ -144,6 +145,29 @@ def GetServiceParams(url):
                 params[k] = v
 
     return params
+
+####################################################################################################
+def GetVideoFromItem(item, params):
+    if params.get('video'):
+        for idx, video in enumerate(item['videos']):
+            if idx+1 == int(params['video']):
+                return video
+    if params.get('season') and params.get('episode'):
+        for sidx, season in enumerate(item['seasons']):
+            if season['number'] != int(params['season']):
+                continue
+            for eidx, episode in enumerate(season['episodes']):
+                if eidx+1 == int(params['episode']):
+                    return episode
+
+####################################################################################################
+def GetVideoFromUrl(url):
+    item = GetItem(url)
+    if item:
+        params = GetServiceParams(url)
+        video = GetVideoFromItem(item, params)
+        return (item, video)
+    return (None, None)
 
 ####################################################################################################
 def GetItem(url):
