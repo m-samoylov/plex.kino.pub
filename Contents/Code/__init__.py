@@ -21,8 +21,9 @@ PREFIX = '/video/kinopub'
 
 settings = kinopub_settings.Settings(Dict, storage_type="dict")
 kpubapi = kinopub_api.API(settings, HTTPHandler=HTTP)
-Log("Device ode is : %s " % kpubapi.device_code)
+
 ITEM_URL = kinopub_api.API_URL + '/items'
+ITEMS_PER_PAGE = 19
 
 ####################################################################################################
 def Start():
@@ -120,6 +121,7 @@ def MainMenu():
 
 @route(PREFIX + '/Items/{type}', qp=dict)
 def Items(title, qp=dict):
+    qp['perpage'] = ITEMS_PER_PAGE
     response = kpubapi.api_request('items', qp)
     oc = ObjectContainer(title2=title, view_group='InfoList')
     if response['status'] == 200:
@@ -153,16 +155,14 @@ def Items(title, qp=dict):
                     oc.add(li)
 
         # Add "next page" button
-        # pagination = response['pagination']
-        # if (int(pagination['current'])) + 1 <= int(pagination['total']):
-        #     params['page'] = int(pagination['current'])+1
-        #     li = NextPageObject(
-        #         key = Callback(Items),
-        #         title = unicode('Еще...')
-        #     )
-        #     link = get_internal_link("items", qp)
-        #     xbmcplugin.addDirectoryItem(handle, link, li, True)
-        # xbmcplugin.endOfDirectory(handle)
+        pagination = response['pagination']
+        if (int(pagination['current'])) + 1 <= int(pagination['total']):
+            qp['page'] = int(pagination['current'])+1
+            li = NextPageObject(
+                key = Callback(Items, title=title, qp=qp),
+                title = unicode('Еще...')
+            )
+            oc.add(li)
     return oc
 
 @route(PREFIX + '/View', qp=dict)
