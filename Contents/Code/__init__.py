@@ -26,7 +26,7 @@ ITEM_URL = kinopub_api.API_URL + '/items'
 
 ####################################################################################################
 def Start():
-    Resource.AddMimeType('image/png','png')
+    #Resource.AddMimeType('image/png','png')
     Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
     Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
 
@@ -98,8 +98,8 @@ def MainMenu():
         objects = [
             InputDirectoryObject(
                 key     = Callback(Search, item = 'Поиск', title='Поиск'),
-                title   = 'Поиск',
-                prompt  = 'Поиск'
+                title   = unicode('Поиск'),
+                prompt  = unicode('Поиск')
             ),
         ]
     )
@@ -110,8 +110,8 @@ def MainMenu():
         for item in response['items']:
             li = DirectoryObject(
                 key = Callback(Items, title=item['title'], qp={'type': item['id']}),
-                title = item['title'],
-                summary = item['title']
+                title = unicode(item['title']),
+                summary = unicode(item['title'])
             )
             oc.add(li)
     else:
@@ -210,7 +210,7 @@ def View(title, qp=dict):
                 li = VideoClipObject(
                     url = "%s/%s?access_token=%s#video=%s" % (ITEM_URL, item['id'], settings.get('access_token'), video_number),
                     title = video['title'],
-                    year = int(item['year'],
+                    year = int(item['year']),
                     summary = str(item['plot']),
                     genres = [x['title'] for x in item['genres']],
                     directors = item['director'].split(','),
