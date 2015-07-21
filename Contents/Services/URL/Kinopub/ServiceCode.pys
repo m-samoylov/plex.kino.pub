@@ -1,0 +1,150 @@
+# -*- coding: utf-8 -*-
+
+import traceback
+import json
+
+
+####################################################################################################
+def NormalizeURL(url):
+    #if '&' in url:
+    #    return url.split('&')[0]
+    return url
+
+####################################################################################################
+def MetadataObjectForURL(url):
+    try:
+        item = GetItem(url)
+        if item:
+            return VideoClipObject(
+                title = str(item['title']),
+                year = int(item['year']),
+                summary = str(item['plot']),
+                genres = [x['title'] for x in item['genres']],
+                directors = item['director'].split(','),
+                countries = [x['title'] for x in item['countries']],
+                thumb = Resource.ContentsOfURLWithFallback(item['posters']['big'], fallback='icon-default.png')
+            )
+            raise Exception()
+    except:
+        return VideoClipObject(
+            title = '<error>',
+            summary = '<An error occurred while fetching metadata>',
+        )
+
+####################################################################################################
+def MediaObjectsForURL(url):
+    mos = []
+    params = GetServiceParams(url)
+    item = GetItem(url)
+    video = GetVideoFromItem(item, params)
+    if video:
+        for i in video['files']:
+            # monkey patching
+            quality = str(i['quality'].replace('p', '')) if i['quality'] != '3d' else '1080'
+
+            mos.append(MediaObject(
+                parts = [PartObject(key=Callback(PlayVideo, url=i['url'], format=i['quality'], codecs='H264'))],
+                container = Container.MP4,
+                video_codec = VideoCodec.H264,
+                video_resolution = quality,
+                # width = int(i['w']),
+                # height = int(i['h']),
+                audio_codec = AudioCodec.AAC,
+                audio_channels = 2,
+                optimized_for_streaming = True
+            ))
+
+    # mos.append(MediaObject(
+    #     parts = [PartObject(key=Callback(PlayVideo, url=url, fmt='1080'))],
+    #     container = Container.MP4,
+    #     video_codec = VideoCodec.H264,
+    #     video_resolution = '1080',
+    #     audio_codec = AudioCodec.AAC,
+    #     audio_channels = 2,
+    #     optimized_for_streaming = True
+    # ))
+    # mos.append(MediaObject(
+    #     parts = [PartObject(key=Callback(PlayVideo, url=url, fmt='920'))],
+    #     container = Container.MP4,
+    #     video_codec = VideoCodec.H264,
+    #     video_resolution = '920',
+    #     audio_codec = AudioCodec.AAC,
+    #     audio_channels = 2,
+    #     optimized_for_streaming = True
+    # ))
+    # mos.append(MediaObject(
+    #     parts = [PartObject(key=Callback(PlayVideo, url=url, fmt='720'))],
+    #     container = Container.MP4,
+    #     video_codec = VideoCodec.H264,
+    #     video_resolution = '720',
+    #     audio_codec = AudioCodec.AAC,
+    #     audio_channels = 2,
+    #     optimized_for_streaming = True
+    # ))
+    # mos.append(MediaObject(
+    #     parts = [PartObject(key=Callback(PlayVideo, url=url, fmt='420'))],
+    #     container = Container.MP4,
+    #     video_codec = VideoCodec.H264,
+    #     video_resolution = '420',
+    #     audio_codec = AudioCodec.AAC,
+    #     audio_channels = 2,
+    #     optimized_for_streaming = True
+    # ))
+    return mos
+
+####################################################################################################
+def GetVideoFromItem(item, params):
+    if params.get('video'):
+        for idx, video in enumerate(item['videos']):
+            if idx+1 == int(params['video']):
+                return video
+    if params.get('season') and params.get('episode'):
+        for sidx, season in enumerate(item['seasons']):
+            if season['number'] != int(params['season']):
+                continue
+            for eidx, episode in enumerate(season['episodes']):
+                if eidx+1 == int(params['episode']):
+                    return episode
+
+####################################################################################################
+@indirect
+def PlayVideo(url, fmt=None):
+    try:
+        item = GetItem(url)
+        params = GetServiceParams(url)
+        video = GetVideoFromItem(item, params)
+        if video:
+            for f in video['files']:
+                url = f['url']
+                break
+
+            return IndirectResponse(VideoClipObject, key=url)
+        raise
+    except:
+        Log.Exception("Couldn't find all the required info to play this video.")
+        raise Ex.MediaNotAvailable
+
+####################################################################################################
+# Queue fix (PlayVideoIndirect was renamed to PlayVideo at one point)
+PlayVideoIndirect = PlayVideo
+
+def GetServiceParams(url):
+    params = {}
+    if '#' in url:
+        url = url.split('#')[1]
+        for i in url.split('&'):
+            if '=' in i:
+                k, v = i.split('=')
+                params[k] = v
+
+    return params
+
+####################################################################################################
+def GetItem(url):
+    if '#' in url:
+        url = url.split('#')[0]
+    response = HTTP.Request(url, cacheTime=CACHE_1WEEK)
+    response = json.loads(str(response).decode('utf-8'))
+    if response['status'] == 200:
+        return response['item']
+    return None
