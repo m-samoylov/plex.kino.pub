@@ -41,10 +41,10 @@ def MediaObjectsForURL(url):
         for i in video['files']:
             # monkey patching
             quality = str(i['quality'].replace('p', '')) if i['quality'].lower() != '3d' else '1080'
-
+            Log("FORMAT IS %s" % i['url'])
             mos.append(MediaObject(
-                parts = [PartObject(key=Callback(PlayVideo, url=i['url'], fmt=i['quality']))],
-                protocol = 'hls',
+                parts = [PartObject(key=Callback(PlayVideo, url=i['url']['http'], fmt=i['quality']))],
+                protocol='http',
                 container = Container.MP4,
                 video_codec = VideoCodec.H264,
                 video_resolution = quality,

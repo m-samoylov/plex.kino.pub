@@ -171,7 +171,7 @@ class API(object):
             return True
         return False
 
-    def api_request(self, action, params={}, url=API_URL, timeout=600, disableHTTPHandler=False):
+    def api_request(self, action, params={}, url=API_URL, timeout=600, disableHTTPHandler=False, cacheTime=3600):
         error_msg = {
             'status': 401,
             'name': 'Unauthorized',
@@ -197,7 +197,7 @@ class API(object):
             req_url = "%s/%s?%s" % (url, action, uparams)
             if self.HTTPHandler and not disableHTTPHandler:
                 # @TODO: change cache time
-                response = str(self.HTTPHandler.Request(req_url, cacheTime=0)).decode('utf-8')
+                response = str(self.HTTPHandler.Request(req_url, cacheTime=cacheTime)).decode('utf-8')
             else:
                 response = urllib2.urlopen(req_url, timeout=timeout).read()
             return json.loads(response)

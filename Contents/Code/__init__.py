@@ -27,7 +27,6 @@ ITEMS_PER_PAGE = 19
 
 ####################################################################################################
 def Start():
-    #Resource.AddMimeType('image/png','png')
     Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
     Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
 
@@ -44,7 +43,6 @@ def Start():
     InputDirectoryObject.art = R(ART)
 
     HTTP.CacheTime = CACHE_1HOUR
-    #KHTTP.CacheTime = CACHE_1HOUR
 
 
 # def ValidatePrefs():
@@ -102,6 +100,11 @@ def MainMenu():
                 title   = unicode('Поиск'),
                 prompt  = unicode('Поиск')
             ),
+            DirectoryObject(
+                key = Callback(Items, title='Последние'),
+                title = unicode('Последние'),
+                summary = unicode('Все фильмы и сериалы отсортированные по дате добавления.')
+            )
         ]
     )
 
@@ -148,7 +151,8 @@ def Items(title, qp=dict):
                                 directors = item['director'].split(','),
                                 countries = [x['title'] for x in item['countries']],
                                 content_rating = item['rating'],
-                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
+                                duration = int(videos[0]['duration'])*1000,
+                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'].replace('dev.', ''), fallback=R(ICON))
                             )
                             
                         else:
@@ -156,8 +160,8 @@ def Items(title, qp=dict):
                             li = DirectoryObject(
                                 key = Callback(View, title=item['title'], qp={'id': item['id']}),
                                 title = item['title'],
-                                #summary = unicode(item['plot']),
-                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
+                                summary = item['plot'],
+                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'].replace('dev.', ''), fallback=R(ICON))
                             )
                         video_clips[num] = li
 
@@ -183,33 +187,41 @@ def View(title, qp=dict):
         item = response['item']
         # prepare serials
         if item['type'] in ['serial', 'docuserial']:
+            Log('WE HAVE SERIAL OR DOCUSERIAL')
             if 'season' in qp:
                 for season in item['seasons']:
+                    Log('Verify season %s' % season['number'])
                     if int(season['number']) == int(qp['season']):
                         for episode_number, episode in enumerate(season['episodes']):
                             episode_number += 1
+                            Log('Add episode for %s' % episode_number)
                             # create playable item
+                            episode_title = "%s" % episode['title'] if len(episode['title']) > 1 else "Эпизод %s" % episode_number
+                            episode_title = "%02d. %s"  % (episode_number, episode_title)
                             li = VideoClipObject(
                                 url = "%s/%s?access_token=%s#season=%s&episode=%s" % (ITEM_URL, item['id'], settings.get('access_token'), season['number'], episode_number),
-                                title = episode['title'],
+                                title = unicode(episode_title),
                                 year = int(item['year']),
                                 summary = str(item['plot']),
                                 genres = [x['title'] for x in item['genres']],
                                 directors = item['director'].split(','),
                                 countries = [x['title'] for x in item['countries']],
                                 content_rating = item['rating'],
-                                thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'], fallback=R(ICON))
+                                thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'].replace('dev.', ''), fallback=R(ICON))
                             )
                             oc.add(li)
                         break
             else:
                 for season in item['seasons']:
-                    season_title = season['title'].encode('utf-8') if len(season['title']) > 0 else "Сезон %s" % int(season['number'])
+                    season_title = season['title'] if len(season['title']) > 2 else "Сезон %s" % int(season['number'])
+                    test_url = item['posters']['medium'].replace('dev.', '')
                     li = DirectoryObject(
                         key = Callback(View, title=season_title, qp={'id': item['id'], 'season': season['number']}),
-                        title = season_title,
-                        summary = season.get('plot', ''),
-                        thumb = Resource.ContentsOfURLWithFallback(season['episodes'][0]['thumbnail'], fallback=R(ICON))
+                        title = unicode(season_title),
+                        tagline = item['title'],
+                        summary = item['title'],
+                        art = Resource.ContentsOfURLWithFallback(test_url, fallback=R(ART)),
+                        thumb = Resource.ContentsOfURLWithFallback(season['episodes'][0]['thumbnail'].replace('dev.',''), fallback=R(ICON))
                     )
                     oc.add(li)
         #prepare movies, concerts, 3d
@@ -226,7 +238,7 @@ def View(title, qp=dict):
                     directors = item['director'].split(','),
                     countries = [x['title'] for x in item['countries']],
                     content_rating = item['rating'],
-                    thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON))
+                    thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON))
                 )
                 oc.add(li)
         else:
@@ -241,7 +253,7 @@ def View(title, qp=dict):
                 directors = item['director'].split(','),
                 countries = [x['title'] for x in item['countries']],
                 content_rating = item['rating'],
-                thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON))
+                thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON))
             )
             oc.dd(li)
     return oc
