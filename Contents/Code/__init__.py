@@ -98,7 +98,7 @@ def MainMenu():
         view_group = 'InfoList',
         objects = [
             InputDirectoryObject(
-                key     = Callback(Search, item = 'Поиск', title='Поиск'),
+                key     = Callback(Search),
                 title   = unicode('Поиск'),
                 prompt  = unicode('Поиск')
             ),
@@ -123,7 +123,7 @@ def MainMenu():
 def Items(title, qp=dict):
     qp['perpage'] = ITEMS_PER_PAGE
     response = kpubapi.api_request('items', qp)
-    oc = ObjectContainer(title2=title, view_group='InfoList')
+    oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
     if response['status'] == 200:
         video_clips = {}
         @parallelize
@@ -178,7 +178,7 @@ def Items(title, qp=dict):
 @route(PREFIX + '/View', qp=dict)
 def View(title, qp=dict):
     response = kpubapi.api_request('items/%s' % int(qp['id']))
-    oc = ObjectContainer(title2=title, view_group='InfoList')
+    oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
     if response['status'] == 200:
         item = response['item']
         # prepare serials
@@ -247,12 +247,6 @@ def View(title, qp=dict):
     return oc
 
 @route(PREFIX + '/Search')
-def Search(item, title):
-    pass
-
-####################################################################################################
-# def gen_next_page(key, params={}):
-#     return 
-
-def uL(text):
-    return unicode(L(text))
+def Search(query):
+    #return MessageContainer("Поиск", query)
+    return Items('Поиск', qp={'title' : query, 'perpage': ITEMS_PER_PAGE})

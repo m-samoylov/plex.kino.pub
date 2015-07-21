@@ -40,7 +40,7 @@ def MediaObjectsForURL(url):
     if video:
         for i in video['files']:
             # monkey patching
-            quality = str(i['quality'].replace('p', '')) if i['quality'] != '3d' else '1080'
+            quality = str(i['quality'].replace('p', '')) if i['quality'].lower() != '3d' else '1080'
 
             mos.append(MediaObject(
                 parts = [PartObject(key=Callback(PlayVideo, url=i['url'], fmt=i['quality']))],
@@ -147,7 +147,6 @@ def GetServiceParams(url):
 
 ####################################################################################################
 def GetItem(url):
-    Log("URL IN GETITEM() = %s" % url)
     if '#' in url:
         url = url.split('#')[0]
     response = HTTP.Request(url, cacheTime=CACHE_1WEEK)
