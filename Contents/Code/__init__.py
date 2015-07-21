@@ -125,34 +125,44 @@ def Items(title, qp=dict):
     response = kpubapi.api_request('items', qp)
     oc = ObjectContainer(title2=title, view_group='InfoList')
     if response['status'] == 200:
-        for item in response['items']:
-            response2 = kpubapi.api_request('items/%s' % item['id'])
-            if response2['status'] == 200:
-                videos = response2['item'].get('videos', [])
-                Log("LEN OF VID: %s" % len(videos))
-                if item['type'] not in ['serial', 'docuserial'] and len(videos) <= 1:
-                    # create playable item
-                    li = VideoClipObject(
-                        url = "%s/%s?access_token=%s#video=1" % (ITEM_URL, item['id'], settings.get('access_token')),
-                        title = item['title'],
-                        year = int(item['year']),
-                        summary = str(item['plot']),
-                        genres = [x['title'] for x in item['genres']],
-                        directors = item['director'].split(','),
-                        countries = [x['title'] for x in item['countries']],
-                        content_rating = item['rating'],
-                        thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
-                    )
-                    oc.add(li)
-                else:
-                    # create directory for seasons and multiseries videos
-                    li = DirectoryObject(
-                        key = Callback(View, title=item['title'], qp={'id': item['id']}),
-                        title = item['title'],
-                        #summary = unicode(item['plot']),
-                        thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
-                    )
-                    oc.add(li)
+        video_clips = {}
+        @parallelize
+        def load_items():
+            for num in xrange(len(response['items'])):
+                item = response['items'][num]
+
+                @task
+                def load_task(num=num, item=item, video_clips=video_clips):
+                    response2 = kpubapi.api_request('items/%s' % item['id'])
+                    if response2['status'] == 200:
+                        videos = response2['item'].get('videos', [])
+                        Log("LEN OF VID: %s" % len(videos))
+                        if item['type'] not in ['serial', 'docuserial'] and len(videos) <= 1:
+                            # create playable item
+                            li = VideoClipObject(
+                                url = "%s/%s?access_token=%s#video=1" % (ITEM_URL, item['id'], settings.get('access_token')),
+                                title = item['title'],
+                                year = int(item['year']),
+                                summary = str(item['plot']),
+                                genres = [x['title'] for x in item['genres']],
+                                directors = item['director'].split(','),
+                                countries = [x['title'] for x in item['countries']],
+                                content_rating = item['rating'],
+                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
+                            )
+                            
+                        else:
+                            # create directory for seasons and multiseries videos
+                            li = DirectoryObject(
+                                key = Callback(View, title=item['title'], qp={'id': item['id']}),
+                                title = item['title'],
+                                #summary = unicode(item['plot']),
+                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
+                            )
+                        video_clips[num] = li
+
+        for key in sorted(video_clips):
+            oc.add(video_clips[key])
 
         # Add "next page" button
         pagination = response['pagination']
