@@ -5,10 +5,10 @@ import urllib
 import json
 import time
 
-API_URL = "http://dev.kino.pub/api/v1"
-OAUTH_API_URL = "http://dev.kino.pub/oauth2/device"
-CLIENT_ID = "xbmc"
-CLIENT_SECRET = "cgg3gtifu46urtfp2zp1nqtba0k2ezxh"
+API_URL = "http://kino.pub/api/v1"
+OAUTH_API_URL = "http://kino.pub/oauth2/device"
+CLIENT_ID = "plex"
+CLIENT_SECRET = "h2zx6iom02t9cxydcmbo9oi0llld7jsv"
 
 class API(object):
     STATUS_ERROR, STATUS_PENDING, STATUS_SUCCESS, STATUS_EXPIRED = range(4)

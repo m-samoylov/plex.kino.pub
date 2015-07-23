@@ -96,12 +96,12 @@ def MainMenu():
         view_group = 'InfoList',
         objects = [
             InputDirectoryObject(
-                key     = Callback(Search),
+                key     = Callback(Search, qp={}),
                 title   = unicode('Поиск'),
                 prompt  = unicode('Поиск')
             ),
             DirectoryObject(
-                key = Callback(Items, title='Последние'),
+                key = Callback(Items, title='Последние', qp={}),
                 title = unicode('Последние'),
                 summary = unicode('Все фильмы и сериалы отсортированные по дате добавления/обновления.')
             )
@@ -109,7 +109,6 @@ def MainMenu():
     )
 
     response = kpubapi.api_request('types')
-    Log("MainMenu: response[status] = %s" % response['status'])
     if response['status'] == 200:
         for item in response['items']:
             li = DirectoryObject(
@@ -140,12 +139,12 @@ def Types(title, qp=dict):
                 prompt  = unicode('Поиск')
             ),
             DirectoryObject(
-                key = Callback(Items, title='Последние', qp=merge_dicts(qp, dict({'sort': 'updated'}))),
+                key = Callback(Items, title='Последние', qp=merge_dicts(qp, dict({'sort': 'updated-'}))),
                 title = unicode('Последние'),
                 summary = unicode('Отсортированные по дате добавления/обновления.')
             ),
             DirectoryObject(
-                key = Callback(Items, title='Популярные', qp=merge_dicts(qp, dict({'sort': 'rating'}))),
+                key = Callback(Items, title='Популярные', qp=merge_dicts(qp, dict({'sort': 'rating-'}))),
                 title = unicode('Популярные'),
                 summary = unicode('Отсортированные по рейтингу')
             ),
@@ -197,7 +196,6 @@ def Items(title, qp=dict):
                     response2 = kpubapi.api_request('items/%s' % item['id'])
                     if response2['status'] == 200:
                         videos = response2['item'].get('videos', [])
-                        Log("LEN OF VID: %s" % len(videos))
                         if item['type'] not in ['serial', 'docuserial'] and len(videos) <= 1:
                             # create playable item
                             li = VideoClipObject(
@@ -210,7 +208,7 @@ def Items(title, qp=dict):
                                 countries = [x['title'] for x in item['countries']],
                                 content_rating = item['rating'],
                                 duration = int(videos[0]['duration'])*1000,
-                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'].replace('dev.', ''), fallback=R(ICON))
+                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
                             )
                             
                         else:
@@ -219,7 +217,7 @@ def Items(title, qp=dict):
                                 key = Callback(View, title=item['title'], qp={'id': item['id']}),
                                 title = item['title'],
                                 summary = item['plot'],
-                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'].replace('dev.', ''), fallback=R(ICON))
+                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
                             )
                         video_clips[num] = li
 
@@ -266,14 +264,14 @@ def View(title, qp=dict):
                                 countries = [x['title'] for x in item['countries']],
                                 content_rating = item['rating'],
                                 duration = int(episode['duration'])*1000,
-                                thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'].replace('dev.', ''), fallback=R(ICON))
+                                thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'], fallback=R(ICON))
                             )
                             oc.add(li)
                         break
             else:
                 for season in item['seasons']:
                     season_title = season['title'] if len(season['title']) > 2 else "Сезон %s" % int(season['number'])
-                    test_url = item['posters']['medium'].replace('dev.', '')
+                    test_url = item['posters']['medium']
                     li = DirectoryObject(
                         key = Callback(View, title=season_title, qp={'id': item['id'], 'season': season['number']}),
                         title = unicode(season_title),
@@ -297,8 +295,8 @@ def View(title, qp=dict):
                     directors = item['director'].split(','),
                     countries = [x['title'] for x in item['countries']],
                     content_rating = item['rating'],
-                    thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON)),
-                    art = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON))
+                    thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON)),
+                    art = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON))
                 )
                 oc.add(li)
         else:
@@ -314,7 +312,7 @@ def View(title, qp=dict):
                 directors = item['director'].split(','),
                 countries = [x['title'] for x in item['countries']],
                 content_rating = item['rating'],
-                thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'].replace('dev.', ''), fallback=R(ICON))
+                thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON))
             )
             oc.add(li)
     return oc
@@ -333,6 +331,5 @@ def Search(query, qp=dict):
 def merge_dicts(*args):
     result = {}
     for d in args:
-        Log('UPDATE DICT BY %s' % d)
         result.update(d)
     return result

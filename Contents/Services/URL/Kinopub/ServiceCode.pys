@@ -36,8 +36,8 @@ def MetadataObjectForURL(url):
             directors = item['director'].split(','),
             duration = duration,
             countries = [x['title'] for x in item['countries']],
-            thumb = Resource.ContentsOfURLWithFallback(thumb.replace('dev.', ''), fallback='icon-default.png'),
-            art = Resource.ContentsOfURLWithFallback(item['posters']['medium'].replace('dev.', ''), fallback='icon-default.png')
+            thumb = Resource.ContentsOfURLWithFallback(thumb, fallback='icon-default.png'),
+            art = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback='icon-default.png')
         )
         raise Exception()
     except Exception, e:
@@ -56,7 +56,6 @@ def MediaObjectsForURL(url):
         for i in video['files']:
             # monkey patching
             quality = str(i['quality'].replace('p', '')) if i['quality'].lower() != '3d' else '1080'
-            Log("FORMAT IS %s" % i['url'])
             mos.append(MediaObject(
                 parts = [PartObject(key=Callback(PlayVideo, url=i['url']['http'], fmt=i['quality']))],
                 protocol='http',
@@ -124,7 +123,6 @@ def PlayVideo(url, fmt=None):
         #         break
 
         #     #return Redirect(url)
-        #     Log("PlayVideo(): try to play url %s" % url)
         #     return IndirectResponse(VideoClipObject, key=url)
         # raise
     except:
