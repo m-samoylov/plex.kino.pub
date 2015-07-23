@@ -8,7 +8,7 @@
 		<dict>
 			<key>URLPatterns</key>
 			<array>
-				<string>http://dev.kino.pub/api/v1/items/[0-9]+.*</string>
+				<string>http://kino.pub/api/v1/items/[0-9]+.*</string>
 			</array>
 		</dict>
 	</dict>
