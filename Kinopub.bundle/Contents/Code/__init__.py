@@ -53,7 +53,7 @@ def authenticate():
     else:
         # check if we have refresh token
         if settings.get('refresh_token'):
-            status, response = kpubapi.get_access_token(refresh=True):
+            status, response = kpubapi.get_access_token(refresh=True)
             if status == kpubapi.STATUS_SUCCESS:
                 return True
 
