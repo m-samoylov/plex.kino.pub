@@ -51,6 +51,12 @@ def authenticate():
     if kpubapi.is_authenticated():
         return True
     else:
+        # check if we have refresh token
+        if settings.get('refresh_token'):
+            status, response = kpubapi.get_access_token(refresh=True):
+            if status == kpubapi.STATUS_SUCCESS:
+                return True
+
         if settings.get('device_code'):
             # refresh device_code if it expired else device_check code auth
             dev_expire = kpubapi.is_expiring(token_name="device_code", expire_announce=150)
