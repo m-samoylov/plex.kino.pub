@@ -5,8 +5,8 @@ import urllib
 import json
 import time
 
-API_URL = "http://kino.pub/api/v1"
-OAUTH_API_URL = "http://kino.pub/oauth2/device"
+API_URL = "http://api.kino.pub/v1"
+OAUTH_API_URL = "http://api.kino.pub/oauth2/device"
 CLIENT_ID = "plex"
 CLIENT_SECRET = "h2zx6iom02t9cxydcmbo9oi0llld7jsv"
 
@@ -24,7 +24,7 @@ class API(object):
     @access_token.setter
     def access_token(self, value):
         self.settings.set('access_token', value)
-    
+
     @property
     def access_token_expire(self):
         try:
