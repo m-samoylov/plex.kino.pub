@@ -187,6 +187,8 @@ class API(object):
                 else:
                     self.reset_settings()
                     error_msg
+        elif self.device_code:
+            return error_msg
         else:
             self.reset_settings()
             return error_msg
