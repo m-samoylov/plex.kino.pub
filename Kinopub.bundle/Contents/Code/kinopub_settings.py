@@ -8,7 +8,7 @@ class Settings():
         self.storage_type = storage_type
 
     def get(self, key):
-        return self.storage[cid].get(key, None)
+        return self.storage[self.cid].get(key, None)
 
     def set(self, key, value):
-        self.storage[cid][key] = value
+        self.storage[self.cid][key] = value
