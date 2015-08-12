@@ -74,19 +74,19 @@ def authenticate():
                 Log("[authenticate] Device code is expired")
                 status, response = kpubapi.get_device_code()
                 if status == kpubapi.STATUS_SUCCESS:
-                    return MessageContainer(settings.get('user_code'), "Посетите %s для активации устройства" % settings.get('verification_uri'))
+                    return MessageContainer("Активация устройства", "%s\nПосетите %s для активации устройства" % (settings.get('user_code'),settings.get('verification_uri')))
                 return MessageContainer("Ошибка", "Произошла ошибка при обновлении кода устройства, перезапустите плагин.")
             status, response = kpubapi.get_access_token()
             Log("AUTH response status=%s,\n%s" % (status, response))
             if status == kpubapi.STATUS_PENDING:
-                return MessageContainer(settings.get('user_code'), "Посетите %s для активации устройства" % settings.get('verification_uri'))
+                return MessageContainer("Активация устройства", "%s\nПосетите %s для активации устройства" % (settings.get('user_code'),settings.get('verification_uri')))
             elif status == kpubapi.STATUS_SUCCESS:
                 return True
             return MessageContainer("Ошибка", "Произошла ошибка при авторизации устройства, перезапустите плагин.")
         else:
             status, response = kpubapi.get_device_code()
             if status == kpubapi.STATUS_SUCCESS:
-                return MessageContainer(settings.get('user_code'), "Посетите %s для активации устройства" % settings.get('verification_uri'))
+                return MessageContainer("Активация устройства", "%s\nПосетите %s для активации устройства" % (settings.get('user_code'),settings.get('verification_uri')))
             return MessageContainer("Ошибка", "Произошла ошибка при обновлении кода устройства, перезапустите плагин.")
 
         # try to get API, if 401 error we are not authorized. 
