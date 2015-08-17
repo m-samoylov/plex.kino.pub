@@ -19,16 +19,7 @@ SEARCH              = 'icon-search.png'
 
 PREFIX = '/video/kinopub'
 
-# get client id
-clien_identifier = 'single_user'
-try:
-    node = XML.ElementFromURL('http://127.0.0.1:32400/')
-    client_identifier = node.xpath('//MediaContainer')[0].get('machineIdentifier')
-    Dict[client_identifier] = {}
-except:
-   pass 
-
-settings = kinopub_settings.Settings(Dict, client_identifier, storage_type="dict")
+settings = kinopub_settings.Settings(Dict, storage_type="dict")
 kpubapi = kinopub_api.API(settings, HTTPHandler=HTTP)
 
 ITEM_URL = kinopub_api.API_URL + '/items'

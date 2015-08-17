@@ -99,12 +99,15 @@ class API(object):
             resp = urllib2.urlopen(req, udata).read()
             return json.loads(resp)
         except urllib2.URLError, e:
-            if e.code == 400:
-                try:
-                    resp = e.read()
-                    return json.loads(resp)
-                except:
-                    pass
+            try:
+                if e.code == 400:
+                    try:
+                        resp = e.read()
+                        return json.loads(resp)
+                    except:
+                        pass
+            except:
+                pass
             return {'error': 'Service problems'}
 
     def get_device_code(self, url=OAUTH_API_URL):
