@@ -171,7 +171,7 @@ def GetVideoFromUrl(url):
 def GetItem(url):
     if '#' in url:
         url = url.split('#')[0]
-    response = HTTP.Request(url, cacheTime=CACHE_1WEEK)
+    response = HTTP.Request(url, cacheTime=0)
     response = json.loads(str(response).decode('utf-8'))
     if response['status'] == 200:
         return response['item']
