@@ -52,10 +52,16 @@ def MediaObjectsForURL(url):
     params = GetServiceParams(url)
     item = GetItem(url)
     video = GetVideoFromItem(item, params)
+
+    def normalize(qual):
+        qual = str(qual)
+        return int(qual.lower().replace('p', '').replace('3d', '1080'))
+
     if video:
-        for i in video['files']:
+        files = sorted(video['files'], key=lambda x: normalize(x['quality']), reverse=True)
+        for i in reversed(files):
             # monkey patching
-            quality = str(i['quality'].replace('p', '')) if i['quality'].lower() != '3d' else '1080'
+            quality = normalize(i['quality'])
             mos.append(MediaObject(
                 parts = [PartObject(key=Callback(PlayVideo, url=i['url']['http'], fmt=i['quality']))],
                 protocol='http',
