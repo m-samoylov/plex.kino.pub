@@ -43,6 +43,7 @@ def Start():
     InputDirectoryObject.art = R(ART)
 
     HTTP.CacheTime = CACHE_1HOUR
+    HTTP.Headers =["asdasd", "bbbbb"] 
 
 
 # def ValidatePrefs():
@@ -90,6 +91,57 @@ def authenticate():
 
         return True
 
+def show_videos(oc, items):
+    video_clips = {}
+    @parallelize
+    def load_items():
+        for num in xrange(len(items)):
+            item = items[num]
+
+            @task
+            def load_task(num=num, item=item, video_clips=video_clips):
+                response = kpubapi.api_request('items/%s' % item['id'])
+                if response['status'] == 200:
+                    videos = response['item'].get('videos', [])
+                    if item['type'] not in ['serial', 'docuserial'] and len(videos) <= 1:
+                        # create playable item
+                        li = VideoClipObject(
+                            url = "%s/%s?access_token=%s#video=1" % (ITEM_URL, item['id'], settings.get('access_token')),
+                            title = item['title'],
+                            year = int(item['year']),
+                            summary = str(item['plot']),
+                            genres = [x['title'] for x in item['genres']],
+                            directors = item['director'].split(','),
+                            countries = [x['title'] for x in item['countries']],
+                            content_rating = item['rating'],
+                            duration = int(videos[0]['duration'])*1000,
+                            thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
+                        )
+                        
+                    else:
+                        # create directory for seasons and multiseries videos
+                        li = DirectoryObject(
+                            key = Callback(View, title=item['title'], qp={'id': item['id']}),
+                            title = item['title'],
+                            summary = item['plot'],
+                            thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
+                        )
+                    video_clips[num] = li
+
+    for key in sorted(video_clips):
+        oc.add(video_clips[key])
+
+    return oc
+
+def show_pagination(oc, pagination, qp, title=""):
+        # Add "next page" button
+        if (int(pagination['current'])) + 1 <= int(pagination['total']):
+            qp['page'] = int(pagination['current'])+1
+            li = NextPageObject(
+                key = Callback(Items, title=title, qp=qp),
+                title = unicode('Еще...')
+            )
+            oc.add(li)
 
 ####################################################################################################
 @handler(PREFIX, 'kino.pub', thumb=ICON, art=ART)
@@ -110,6 +162,10 @@ def MainMenu():
                 key = Callback(Items, title='Последние', qp={}),
                 title = unicode('Последние'),
                 summary = unicode('Все фильмы и сериалы отсортированные по дате добавления/обновления.')
+            ),
+            DirectoryObject(
+                key = Callback(Bookmarks, title='Закладки', qp={}),
+                title = unicode('Закладки'),
             )
         ]
     )
@@ -191,54 +247,8 @@ def Items(title, qp=dict):
     response = kpubapi.api_request('items', qp)
     oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
     if response['status'] == 200:
-        video_clips = {}
-        @parallelize
-        def load_items():
-            for num in xrange(len(response['items'])):
-                item = response['items'][num]
-
-                @task
-                def load_task(num=num, item=item, video_clips=video_clips):
-                    response2 = kpubapi.api_request('items/%s' % item['id'])
-                    if response2['status'] == 200:
-                        videos = response2['item'].get('videos', [])
-                        if item['type'] not in ['serial', 'docuserial'] and len(videos) <= 1:
-                            # create playable item
-                            li = VideoClipObject(
-                                url = "%s/%s?access_token=%s#video=1" % (ITEM_URL, item['id'], settings.get('access_token')),
-                                title = item['title'],
-                                year = int(item['year']),
-                                summary = str(item['plot']),
-                                genres = [x['title'] for x in item['genres']],
-                                directors = item['director'].split(','),
-                                countries = [x['title'] for x in item['countries']],
-                                content_rating = item['rating'],
-                                duration = int(videos[0]['duration'])*1000,
-                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
-                            )
-                            
-                        else:
-                            # create directory for seasons and multiseries videos
-                            li = DirectoryObject(
-                                key = Callback(View, title=item['title'], qp={'id': item['id']}),
-                                title = item['title'],
-                                summary = item['plot'],
-                                thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
-                            )
-                        video_clips[num] = li
-
-        for key in sorted(video_clips):
-            oc.add(video_clips[key])
-
-        # Add "next page" button
-        pagination = response['pagination']
-        if (int(pagination['current'])) + 1 <= int(pagination['total']):
-            qp['page'] = int(pagination['current'])+1
-            li = NextPageObject(
-                key = Callback(Items, title=title, qp=qp),
-                title = unicode('Еще...')
-            )
-            oc.add(li)
+        show_videos(oc, response['items'])
+        show_pagination(oc, response['pagination'], qp, title=title)
     return oc
 
 '''
@@ -333,6 +343,30 @@ def Search(query, qp=dict):
 
     return Items('Поиск', qp=merge_dicts(qp, dict({'title' : query, 'perpage': ITEMS_PER_PAGE})))
 
+
+'''
+  Bookmarks
+'''
+@route(PREFIX + '/Bookmarks', qp=dict)
+def Bookmarks(title, qp):
+    oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
+    if 'folder-id' not in qp:
+        response = kpubapi.api_request('bookmarks', qp, cacheTime=0)
+        if response['status'] == 200:
+            Log("TOTAL BOOKMARKS = %s" % len(response['items']))
+            for folder in response['items']:
+                Log(folder['title'])
+                li = DirectoryObject(
+                    key = Callback(Bookmarks, title=folder['title'].encode('utf-8'), qp={'folder-id': folder['id']}),
+                    title = unicode(folder['title']),
+                )
+                oc.add(li)
+    else:
+        response = kpubapi.api_request('bookmarks/%s' % qp['folder-id'], qp)
+        if response['status'] == 200:
+            show_videos(oc, response['items'])
+            show_pagination(oc, response['pagination'], qp, title=title)
+    return oc
 ####################
 def merge_dicts(*args):
     result = {}
