@@ -43,7 +43,6 @@ def Start():
     InputDirectoryObject.art = R(ART)
 
     HTTP.CacheTime = CACHE_1HOUR
-    HTTP.Headers =["asdasd", "bbbbb"] 
 
 
 # def ValidatePrefs():
@@ -123,7 +122,7 @@ def show_videos(oc, items):
                         li = DirectoryObject(
                             key = Callback(View, title=item['title'], qp={'id': item['id']}),
                             title = item['title'],
-                            summary = item['plot'],
+                            #summary = item['plot'],
                             thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
                         )
                     video_clips[num] = li
@@ -153,6 +152,7 @@ def MainMenu():
     oc = ObjectContainer(
         view_group = 'InfoList',
         objects = [
+            PrefsObject(title=u'Настройки', thumb=R(PREFS)),
             InputDirectoryObject(
                 key     = Callback(Search, qp={}),
                 title   = unicode('Поиск'),
@@ -162,6 +162,11 @@ def MainMenu():
                 key = Callback(Items, title='Последние', qp={}),
                 title = unicode('Последние'),
                 summary = unicode('Все фильмы и сериалы отсортированные по дате добавления/обновления.')
+            ),
+            DirectoryObject(
+                key = Callback(Items, title='Популярные', qp={'sort':'-rating'}),
+                title = unicode('Популярные'),
+                summary = unicode('Все фильмы и сериалы отсортированные по рейтингу.')
             ),
             DirectoryObject(
                 key = Callback(Bookmarks, title='Закладки', qp={}),
@@ -201,14 +206,19 @@ def Types(title, qp=dict):
                 prompt  = unicode('Поиск')
             ),
             DirectoryObject(
-                key = Callback(Items, title='Последние', qp=merge_dicts(qp, dict({'sort': 'updated-'}))),
+                key = Callback(Items, title='Последние', qp=merge_dicts(qp, dict({'sort': '-updated'}))),
                 title = unicode('Последние'),
                 summary = unicode('Отсортированные по дате добавления/обновления.')
             ),
             DirectoryObject(
-                key = Callback(Items, title='Популярные', qp=merge_dicts(qp, dict({'sort': 'rating-'}))),
+                key = Callback(Items, title='Популярные', qp=merge_dicts(qp, dict({'sort': '-rating'}))),
                 title = unicode('Популярные'),
                 summary = unicode('Отсортированные по рейтингу')
+            ),
+            DirectoryObject(
+                key = Callback(Alphabet, title='По алфавиту', qp=qp),
+                title = unicode('По алфавиту'),
+                summary = unicode('Отсортированные по буквам алфавита.')
             ),
             DirectoryObject(
                 key = Callback(Genres, title='Жанры', qp=qp),
@@ -270,15 +280,11 @@ def View(title, qp=dict):
                             # create playable item
                             episode_title = "%s" % episode['title'] if len(episode['title']) > 1 else "Эпизод %s" % episode_number
                             episode_title = "%02d. %s"  % (episode_number, episode_title)
-                            li = VideoClipObject(
+                            li = EpisodeObject(
                                 url = "%s/%s?access_token=%s#season=%s&episode=%s" % (ITEM_URL, item['id'], settings.get('access_token'), season['number'], episode_number),
                                 title = unicode(episode_title),
-                                year = int(item['year']),
-                                summary = str(item['plot']),
-                                genres = [x['title'] for x in item['genres']],
-                                directors = item['director'].split(','),
-                                countries = [x['title'] for x in item['countries']],
-                                content_rating = item['rating'],
+                                index = episode_number,
+                                rating_key = episode['id'],
                                 duration = int(episode['duration'])*1000,
                                 thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'], fallback=R(ICON))
                             )
@@ -288,11 +294,17 @@ def View(title, qp=dict):
                 for season in item['seasons']:
                     season_title = season['title'] if len(season['title']) > 2 else "Сезон %s" % int(season['number'])
                     test_url = item['posters']['medium']
-                    li = DirectoryObject(
+                    li = VideoClipObject(
                         key = Callback(View, title=season_title, qp={'id': item['id'], 'season': season['number']}),
                         title = unicode(season_title),
-                        tagline = item['title'],
-                        summary = item['title'],
+                        rating_key = item['id'],
+                        rating = item['rating'],
+                        year = int(item['year']),
+                        summary = str(item['plot']),
+                        genres = [x['title'] for x in item['genres']],
+                        directors = item['director'].split(','),
+                        countries = [x['title'] for x in item['countries']],
+                        content_rating = item['rating'],
                         art = Resource.ContentsOfURLWithFallback(test_url, fallback=R(ART)),
                         thumb = Resource.ContentsOfURLWithFallback(season['episodes'][0]['thumbnail'].replace('dev.',''), fallback=R(ICON))
                     )
@@ -302,15 +314,12 @@ def View(title, qp=dict):
             for video_number, video in enumerate(item['videos']):
                 video_number += 1
                 # create playable item
-                li = VideoClipObject(
+                li = EpisodeObject(
                     url = "%s/%s?access_token=%s#video=%s" % (ITEM_URL, item['id'], settings.get('access_token'), video_number),
                     title = video['title'],
-                    year = int(item['year']),
-                    summary = str(item['plot']),
-                    genres = [x['title'] for x in item['genres']],
-                    directors = item['director'].split(','),
-                    countries = [x['title'] for x in item['countries']],
-                    content_rating = item['rating'],
+                    index = video_number,
+                    rating_key = video['id'],
+                    duration = int(video['duration']) * 1000,
                     thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON)),
                     art = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON))
                 )
@@ -319,9 +328,11 @@ def View(title, qp=dict):
             # In true behaviour this section will never reached
             video = item['videos'][0]
             video_number = 1
-            li = VideoClipObject(
+            li = MovieObject(
                 url = "%s/%s?access_token=%s#video=%s" % (ITEM_URL, item['id'], settings.get('access_token'), video_number),
                 title = item['title'],
+                rating_key = item['id'],
+                rating = item['rating'],
                 year = int(item['year']),
                 summary = str(item['plot']),
                 genres = [x['title'] for x in item['genres']],
@@ -343,6 +354,27 @@ def Search(query, qp=dict):
 
     return Items('Поиск', qp=merge_dicts(qp, dict({'title' : query, 'perpage': ITEMS_PER_PAGE})))
 
+
+'''
+  Alphabet
+'''
+@route(PREFIX + '/Alphabet', qp=dict)
+def Alphabet(title, qp):
+    alpha = [
+        "А,Б,В,Г,Д,Е,Ё,Ж,З,И,Й,К,Л,М,Н,О,П,Р,С,Т,У,Ф,Х,Ц,Ч,Ш,Щ,Ы,Э,Ю,Я",
+        "A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z"
+    ]
+
+    oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
+    for al in alpha:
+        letters = al.split(",")
+        for letter in letters:
+            li = DirectoryObject(
+                    key = Callback(Items, title=letter, qp=merge_dicts(qp, {'letter': letter})),
+                title = unicode(letter)
+            )
+            oc.add(li)
+    return oc
 
 '''
   Bookmarks
@@ -367,6 +399,11 @@ def Bookmarks(title, qp):
             show_videos(oc, response['items'])
             show_pagination(oc, response['pagination'], qp, title=title)
     return oc
+
+
+
+
+
 ####################
 def merge_dicts(*args):
     result = {}

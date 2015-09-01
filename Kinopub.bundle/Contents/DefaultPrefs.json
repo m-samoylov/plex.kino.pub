@@ -1,0 +1,18 @@
+[
+    {
+        "id": "streamtype",
+        "type": "text",
+        "label": "Формат стриминга",
+        "default": "http",
+        "values": ["http","hls"],
+        "type": "enum"
+    },
+    {
+        "id": "quality",
+        "type": "text",
+        "label": "Предпочитаемое качество",
+        "default": "1080p",
+        "values": ["480p","720p","1080p", "Auto"],
+        "type": "enum"
+    }
+]

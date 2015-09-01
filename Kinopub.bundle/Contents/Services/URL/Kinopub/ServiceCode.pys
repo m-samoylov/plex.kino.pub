@@ -28,17 +28,20 @@ def MetadataObjectForURL(url):
             if video['thumbnail']:
                  thumb = video['thumbnail']
 
-        return VideoClipObject(
-            title = unicode(title),
-            year = int(item['year']),
-            summary = item['plot'],
-            genres = [x['title'] for x in item['genres']],
-            directors = item['director'].split(','),
-            duration = duration,
-            countries = [x['title'] for x in item['countries']],
-            thumb = Resource.ContentsOfURLWithFallback(thumb, fallback='icon-default.png'),
-            art = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback='icon-default.png')
-        )
+        clipParams = {
+            'title': unicode(title),
+            'duration': duration,
+            'thumb': Resource.ContentsOfURLWithFallback(thumb, fallback='icon-default.png'),
+            'art': Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback='icon-default.png'),
+        }
+        if item['type'] not in ['serial', 'docuserial']:
+            clipParams['genres'] = [x['title'] for x in item['genres']],
+            clipParams['directors'] = item['director'].split(','),
+            clipParams['year'] = int(item['year'])
+            clipParam['countries'] = [x['title'] for x in item['countries']]
+            clipParams['summary'] = item['plot']
+
+        return VideoClipObject(**clipParams)
         raise Exception()
     except Exception, e:
         return VideoClipObject(
@@ -57,60 +60,45 @@ def MediaObjectsForURL(url):
         qual = str(qual)
         return int(qual.lower().replace('p', '').replace('3d', '1080'))
 
+    def getStreamFile(files, quality):
+        sf = None
+        for f in files:
+            if normalize(f['quality']) <= normalize(quality):
+                sf = f
+                break
+            sf = f
+        return sf
+
+    streamType = 'hls' if Prefs['streamtype'] == 'hls' else 'http'
     if video:
         files = sorted(video['files'], key=lambda x: normalize(x['quality']), reverse=True)
-        for i in reversed(files):
-            # monkey patching
-            quality = normalize(i['quality'])
+        if Prefs['quality'] == 'Auto':
+            for i in reversed(files):
+                # monkey patching
+                quality = normalize(i['quality'])
+                mos.append(MediaObject(
+                    parts = [PartObject(key=Callback(PlayVideo, url=i['url'][streamType], fmt=i['quality']))],
+                    protocol=streamType,
+                    container = Container.MP4,
+                    video_codec = VideoCodec.H264,
+                    video_resolution = quality,
+                    audio_codec = AudioCodec.AAC,
+                    audio_channels = 2,
+                    optimized_for_streaming = True
+                ))
+        else:
+            f = getStreamFile(files, Prefs['quality'])
             mos.append(MediaObject(
-                parts = [PartObject(key=Callback(PlayVideo, url=i['url']['http'], fmt=i['quality']))],
-                protocol='http',
+                parts = [PartObject(key=Callback(PlayVideo, url=f['url'][streamType], fmt=f['quality']))],
+                protocol=streamType,
                 container = Container.MP4,
                 video_codec = VideoCodec.H264,
-                video_resolution = quality,
-                # width = int(i['w']),
-                # height = int(i['h']),
+                video_resolution = normalize(f['quality']),
                 audio_codec = AudioCodec.AAC,
                 audio_channels = 2,
                 optimized_for_streaming = True
             ))
 
-    # mos.append(MediaObject(
-    #     parts = [PartObject(key=Callback(PlayVideo, url=url, fmt='1080'))],
-    #     container = Container.MP4,
-    #     video_codec = VideoCodec.H264,
-    #     video_resolution = '1080',
-    #     audio_codec = AudioCodec.AAC,
-    #     audio_channels = 2,
-    #     optimized_for_streaming = True
-    # ))
-    # mos.append(MediaObject(
-    #     parts = [PartObject(key=Callback(PlayVideo, url=url, fmt='920'))],
-    #     container = Container.MP4,
-    #     video_codec = VideoCodec.H264,
-    #     video_resolution = '920',
-    #     audio_codec = AudioCodec.AAC,
-    #     audio_channels = 2,
-    #     optimized_for_streaming = True
-    # ))
-    # mos.append(MediaObject(
-    #     parts = [PartObject(key=Callback(PlayVideo, url=url, fmt='720'))],
-    #     container = Container.MP4,
-    #     video_codec = VideoCodec.H264,
-    #     video_resolution = '720',
-    #     audio_codec = AudioCodec.AAC,
-    #     audio_channels = 2,
-    #     optimized_for_streaming = True
-    # ))
-    # mos.append(MediaObject(
-    #     parts = [PartObject(key=Callback(PlayVideo, url=url, fmt='420'))],
-    #     container = Container.MP4,
-    #     video_codec = VideoCodec.H264,
-    #     video_resolution = '420',
-    #     audio_codec = AudioCodec.AAC,
-    #     audio_channels = 2,
-    #     optimized_for_streaming = True
-    # ))
     return mos
 
 ####################################################################################################
@@ -182,3 +170,4 @@ def GetItem(url):
     if response['status'] == 200:
         return response['item']
     return None
+
