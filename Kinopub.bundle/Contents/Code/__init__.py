@@ -108,6 +108,7 @@ def show_videos(oc, items):
                             url = "%s/%s?access_token=%s#video=1" % (ITEM_URL, item['id'], settings.get('access_token')),
                             title = item['title'],
                             year = int(item['year']),
+                            #rating = float(item['rating']),
                             summary = str(item['plot']),
                             genres = [x['title'] for x in item['genres']],
                             directors = item['director'].split(','),
@@ -122,7 +123,7 @@ def show_videos(oc, items):
                         li = DirectoryObject(
                             key = Callback(View, title=item['title'], qp={'id': item['id']}),
                             title = item['title'],
-                            #summary = item['plot'],
+                            summary = item['plot'],
                             thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
                         )
                     video_clips[num] = li
@@ -294,18 +295,9 @@ def View(title, qp=dict):
                 for season in item['seasons']:
                     season_title = season['title'] if len(season['title']) > 2 else "Сезон %s" % int(season['number'])
                     test_url = item['posters']['medium']
-                    li = VideoClipObject(
+                    li = DirectoryObject(
                         key = Callback(View, title=season_title, qp={'id': item['id'], 'season': season['number']}),
                         title = unicode(season_title),
-                        rating_key = item['id'],
-                        rating = item['rating'],
-                        year = int(item['year']),
-                        summary = str(item['plot']),
-                        genres = [x['title'] for x in item['genres']],
-                        directors = item['director'].split(','),
-                        countries = [x['title'] for x in item['countries']],
-                        content_rating = item['rating'],
-                        art = Resource.ContentsOfURLWithFallback(test_url, fallback=R(ART)),
                         thumb = Resource.ContentsOfURLWithFallback(season['episodes'][0]['thumbnail'].replace('dev.',''), fallback=R(ICON))
                     )
                     oc.add(li)
@@ -321,18 +313,15 @@ def View(title, qp=dict):
                     rating_key = video['id'],
                     duration = int(video['duration']) * 1000,
                     thumb = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON)),
-                    art = Resource.ContentsOfURLWithFallback(video['thumbnail'], fallback=R(ICON))
                 )
                 oc.add(li)
         else:
-            # In true behaviour this section will never reached
             video = item['videos'][0]
             video_number = 1
             li = MovieObject(
                 url = "%s/%s?access_token=%s#video=%s" % (ITEM_URL, item['id'], settings.get('access_token'), video_number),
                 title = item['title'],
                 rating_key = item['id'],
-                rating = item['rating'],
                 year = int(item['year']),
                 summary = str(item['plot']),
                 genres = [x['title'] for x in item['genres']],
