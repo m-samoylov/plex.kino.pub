@@ -38,7 +38,7 @@ def MetadataObjectForURL(url):
             clipParams['genres'] = [x['title'] for x in item['genres']],
             clipParams['directors'] = item['director'].split(','),
             clipParams['year'] = int(item['year'])
-            clipParam['countries'] = [x['title'] for x in item['countries']]
+            clipParams['countries'] = [x['title'] for x in item['countries']]
             clipParams['summary'] = item['plot']
 
         return VideoClipObject(**clipParams)
