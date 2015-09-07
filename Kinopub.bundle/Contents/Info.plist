@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>Version</key>
-	<string>1.3</string>
+	<string>1.0.4</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.plexapp.plugins.kinopub</string>
 	<key>PlexAudioCodec</key>
