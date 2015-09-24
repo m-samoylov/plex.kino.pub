@@ -156,7 +156,7 @@ class API(object):
             self.device_code = None
             return self.STATUS_SUCCESS, resp
 
-        return self.STATUS_ERROR
+        return self.STATUS_ERROR, resp
 
     def is_authenticated(self):
         response = self.api_request('types', disableHTTPHandler=True)

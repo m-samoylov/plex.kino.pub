@@ -133,12 +133,15 @@ def show_videos(oc, items):
 
     return oc
 
-def show_pagination(oc, pagination, qp, title=""):
+def show_pagination(oc, pagination, qp, title="", callback=None):
         # Add "next page" button
+        if callback is None:
+            callback = Items
+
         if (int(pagination['current'])) + 1 <= int(pagination['total']):
             qp['page'] = int(pagination['current'])+1
             li = NextPageObject(
-                key = Callback(Items, title=title, qp=qp),
+                key = Callback(callback, title=title, qp=qp),
                 title = unicode('Еще...')
             )
             oc.add(li)
@@ -383,10 +386,10 @@ def Bookmarks(title, qp):
                 )
                 oc.add(li)
     else:
-        response = kpubapi.api_request('bookmarks/%s' % qp['folder-id'], qp)
+        response = kpubapi.api_request('bookmarks/%s' % qp['folder-id'], qp, cacheTime=0)
         if response['status'] == 200:
             show_videos(oc, response['items'])
-            show_pagination(oc, response['pagination'], qp, title=title)
+            show_pagination(oc, response['pagination'], qp, title=title, callback=Bookmarks)
     return oc
 
 

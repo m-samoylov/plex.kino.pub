@@ -35,8 +35,8 @@ def MetadataObjectForURL(url):
             'art': Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback='icon-default.png'),
         }
         if item['type'] not in ['serial', 'docuserial']:
-            clipParams['genres'] = [x['title'] for x in item['genres']],
-            clipParams['directors'] = item['director'].split(','),
+            clipParams['genres'] = [x['title'] for x in item['genres']]
+            clipParams['directors'] = item['director'].split(',')
             clipParams['year'] = int(item['year'])
             clipParams['countries'] = [x['title'] for x in item['countries']]
             clipParams['summary'] = item['plot']
