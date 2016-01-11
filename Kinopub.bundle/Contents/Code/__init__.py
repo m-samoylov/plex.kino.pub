@@ -45,7 +45,8 @@ def Start():
     HTTP.CacheTime = CACHE_1HOUR
 
 
-# def ValidatePrefs():
+def ValidatePrefs():
+    return
 
 def authenticate():
     if kpubapi.is_authenticated():
@@ -201,6 +202,10 @@ def MainMenu():
 '''
 @route(PREFIX + '/Types', qp=dict)
 def Types(title, qp=dict):
+    result = authenticate()
+    if not result == True:
+        return result
+
     oc = ObjectContainer(
         view_group = 'InfoList',
         objects = [
@@ -239,6 +244,10 @@ def Types(title, qp=dict):
 '''
 @route(PREFIX + '/Genres', qp=dict)
 def Genres(title, qp=dict):
+    result = authenticate()
+    if not result == True:
+        return result
+
     response = kpubapi.api_request('genres', params={'type': qp['type']})
     oc = ObjectContainer(view_group='InfoList')
     if response['status'] == 200:
@@ -257,6 +266,10 @@ def Genres(title, qp=dict):
 '''
 @route(PREFIX + '/Items', qp=dict)
 def Items(title, qp=dict):
+    result = authenticate()
+    if not result == True:
+        return result
+
     qp['perpage'] = ITEMS_PER_PAGE
     response = kpubapi.api_request('items', qp)
     oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
@@ -270,6 +283,10 @@ def Items(title, qp=dict):
 '''
 @route(PREFIX + '/View', qp=dict)
 def View(title, qp=dict):
+    result = authenticate()
+    if not result == True:
+        return result
+
     response = kpubapi.api_request('items/%s' % int(qp['id']))
     oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
     if response['status'] == 200:
@@ -341,6 +358,10 @@ def View(title, qp=dict):
 '''
 @route(PREFIX + '/Search', qp=dict)
 def Search(query, qp=dict):
+    result = authenticate()
+    if not result == True:
+        return result
+
     if qp.get('id'):
         del qp['id']
 
@@ -352,6 +373,10 @@ def Search(query, qp=dict):
 '''
 @route(PREFIX + '/Alphabet', qp=dict)
 def Alphabet(title, qp):
+    result = authenticate()
+    if not result == True:
+        return result
+
     alpha = [
         "А,Б,В,Г,Д,Е,Ё,Ж,З,И,Й,К,Л,М,Н,О,П,Р,С,Т,У,Ф,Х,Ц,Ч,Ш,Щ,Ы,Э,Ю,Я",
         "A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z"
@@ -373,6 +398,10 @@ def Alphabet(title, qp):
 '''
 @route(PREFIX + '/Bookmarks', qp=dict)
 def Bookmarks(title, qp):
+    result = authenticate()
+    if not result == True:
+        return result
+
     oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
     if 'folder-id' not in qp:
         response = kpubapi.api_request('bookmarks', qp, cacheTime=0)
@@ -402,3 +431,4 @@ def merge_dicts(*args):
     for d in args:
         result.update(d)
     return result
+
