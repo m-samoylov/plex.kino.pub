@@ -453,21 +453,21 @@ def Watching(title, qp=dict):
             if response['status'] == 200:
                 item = response['item']
                 for season in item['seasons']:
-                    if season['status'] != STATUS_WATCHED:
+                    if int(season['status']) != STATUS_WATCHED:
                         for episode in season['episodes']:
-                            if episode['status'] != STATUS_WATCHED:
+                            if int(episode['status']) != STATUS_WATCHED:
                                 episode_title = "%s" % episode['title'] if len(episode['title']) > 1 else "Эпизод %s" % episode['number']
-                                episode_title = "%02d. %s"  % (episode['number'], episode_title)
+                                episode_title = "S%02dE%02d. %s"  % (season['number'], episode['number'], episode_title)
                                 li = EpisodeObject(
                                     url = "%s/%s?access_token=%s#season=%s&episode=%s" % (ITEM_URL, item['id'], settings.get('access_token'), season['number'], episode['number']),
                                     title = unicode(episode_title),
                                     index = episode['number'],
                                     rating_key = episode['id'],
                                     duration = int(episode['duration'])*1000
-                                    thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'], fallback=R(ICON))
+                                    #thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'], fallback=R(ICON))
                                 )
                                 oc.add(li)
-                oc.objects.sort(key = lambda obj: obj.index)
+                oc.objects.sort(key = lambda obj: obj.title)
     return oc
 
 
