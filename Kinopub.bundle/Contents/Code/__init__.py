@@ -25,6 +25,10 @@ kpubapi = kinopub_api.API(settings, HTTPHandler=HTTP)
 ITEM_URL = kinopub_api.API_URL + '/items'
 ITEMS_PER_PAGE = 19
 
+STATUS_WATCHED = 1
+STATUS_UNWATCHED = -1
+STATUS_STARTED = 0
+
 ####################################################################################################
 def Start():
     Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
@@ -176,6 +180,10 @@ def MainMenu():
             DirectoryObject(
                 key = Callback(Bookmarks, title='Закладки', qp={}),
                 title = unicode('Закладки'),
+            ),
+            DirectoryObject(
+                key = Callback(Watching, title='Новые эпизоды', qp={}),
+                title = unicode('Новые эпизоды (%s)' % get_unwatched_count())
             )
         ]
     )
@@ -422,6 +430,46 @@ def Bookmarks(title, qp):
     return oc
 
 
+@route(PREFIX + '/Watching', qp=dict)
+def Watching(title, qp=dict):
+    result = authenticate()
+    if not result == True:
+        return result
+
+    oc = ObjectContainer(title2=unicode(title), view_group='InfoList')
+    if 'new' not in qp:
+        response = kpubapi.api_request('watching/serials',params={'subscribed': 1})
+        if response['status'] == 200:
+            for item in response['items']:
+                li = DirectoryObject(
+                    key = Callback(Watching, title=item['title'], qp={'id': item['id'], 'new': item['new']}),
+                    title = item['title'] + ' (%s)' % item['new'],
+                    thumb = Resource.ContentsOfURLWithFallback(item['posters']['medium'], fallback=R(ICON))
+                )
+                oc.add(li)
+            oc.objects.sort(key = lambda obj: obj.title)
+    else:
+            response = kpubapi.api_request('watching',params={'id': qp['id']})
+            if response['status'] == 200:
+                item = response['item']
+                for season in item['seasons']:
+                    if season['status'] != STATUS_WATCHED:
+                        for episode in season['episodes']:
+                            if episode['status'] != STATUS_WATCHED:
+                                episode_title = "%s" % episode['title'] if len(episode['title']) > 1 else "Эпизод %s" % episode['number']
+                                episode_title = "%02d. %s"  % (episode['number'], episode_title)
+                                li = EpisodeObject(
+                                    url = "%s/%s?access_token=%s#season=%s&episode=%s" % (ITEM_URL, item['id'], settings.get('access_token'), season['number'], episode['number']),
+                                    title = unicode(episode_title),
+                                    index = episode['number'],
+                                    rating_key = episode['id'],
+                                    duration = int(episode['duration'])*1000
+                                    thumb = Resource.ContentsOfURLWithFallback(episode['thumbnail'], fallback=R(ICON))
+                                )
+                                oc.add(li)
+                oc.objects.sort(key = lambda obj: obj.index)
+    return oc
+
 
 
 
@@ -432,3 +480,14 @@ def merge_dicts(*args):
         result.update(d)
     return result
 
+def get_unwatched_count():
+    result = authenticate()
+    if not result == True:
+        return result
+
+    count = 0
+    response_serials = kpubapi.api_request('watching/serials',params={'subscribed': 1})
+    if response_serials['status'] == 200:
+        for serial in response_serials['items']:
+            count += serial['new']
+    return count
